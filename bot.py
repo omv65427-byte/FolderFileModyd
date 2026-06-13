@@ -16,7 +16,8 @@ from mods.fileinfo   import mod_fileinfo
 #  CONFIG — apna token aur user ID daalo
 # ═══════════════════════════════════════════
 BOT_TOKEN   = os.environ.get("BOT_TOKEN", "APNA_TOKEN_YAHAN")
-OWNER_ID    = int(os.environ.get("OWNER_ID", "0"))   # apna Telegram user ID
+# CHANGE 1: Single owner se multiple owners mein change
+OWNER_IDS = [int(x.strip()) for x in os.environ.get("OWNER_ID", "0").split(",")]
 WORK_DIR    = "/tmp/ff_bot_work"
 os.makedirs(WORK_DIR, exist_ok=True)
 
@@ -28,7 +29,8 @@ logging.basicConfig(level=logging.INFO)
 def owner_only(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid = update.effective_user.id if update.effective_user else 0
-        if uid != OWNER_ID:
+        # CHANGE 2: uid != OWNER_ID ki jagah uid not in OWNER_IDS
+        if uid not in OWNER_IDS:
             if update.message:
                 await update.message.reply_text("❌ Access denied.")
             elif update.callback_query:
@@ -284,14 +286,16 @@ async def process_mod(update, context, uid, s):
 #  MAIN
 # ═══════════════════════════════════════════
 def main():
-    if OWNER_ID == 0:
+    if not OWNER_IDS or OWNER_IDS[0] == 0:
         print("❌ OWNER_ID set nahi hai! .env mein daalo.")
+        print("Single owner: OWNER_ID=123456789")
+        print("Multiple owners: OWNER_ID=123456789,987654321,555666777")
         return
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start",  start))
     app.add_handler(CallbackQueryHandler(button_cb))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("✅ FF MOD Bot chal raha hai...")
+    print(f"✅ FF MOD Bot chal raha hai with {len(OWNER_IDS)} owner(s)...")
     app.run_polling()
 
 if __name__ == "__main__":
